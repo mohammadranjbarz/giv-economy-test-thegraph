@@ -4,3 +4,9 @@ type ExampleEntity @entity {
   distributor: Bytes! # address
   grantee: Bytes! # address
 }
+
+type Balance @entity {
+  id: ID!
+  amount : BigInt!
+  address : String
+}

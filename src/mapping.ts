@@ -10,31 +10,9 @@ import {
   RoleRevoked,
   StartTimeChanged
 } from "../generated/TokenDistro/TokenDistro"
-import { ExampleEntity } from "../generated/schema"
+import {Balance, ExampleEntity} from "../generated/schema"
 
 export function handleAllocate(event: Allocate): void {
-  // Entities can be loaded from the store using a string ID; this ID
-  // needs to be unique across all entities of the same type
-  let entity = ExampleEntity.load(event.transaction.from.toHex())
-
-  // Entities only exist after they have been saved to the store;
-  // `null` checks allow to create entities on demand
-  if (!entity) {
-    entity = new ExampleEntity(event.transaction.from.toHex())
-
-    // Entity fields can be set using simple assignments
-    entity.count = BigInt.fromI32(0)
-  }
-
-  // BigInt and BigDecimal math are supported
-  entity.count = entity.count + BigInt.fromI32(1)
-
-  // Entity fields can be set based on event parameters
-  entity.distributor = event.params.distributor
-  entity.grantee = event.params.grantee
-
-  // Entities can be written to the store with `.save()`
-  entity.save()
 
   // Note: If a handler doesn't require existing field values, it is faster
   // _not_ to load the entity from the store. Instead, create it fresh with
@@ -73,11 +51,37 @@ export function handleAllocate(event: Allocate): void {
   // - contract.totalTokens(...)
 }
 
-export function handleAssign(event: Assign): void {}
+export function handleAssign(event: Assign): void {
+  const id = event.params.distributor.toHex()
+  const amount = event.params.amount;
+  if (!id){
+    return
+  }
+  let balance = Balance.load(id )
+  if (balance){
+    balance.amount.plus(amount)
+  }else{
+    balance = new Balance(id )
+    balance.address = id
+    balance.amount = amount
+  }
+  balance.save();
+
+}
 
 export function handleChangeAddress(event: ChangeAddress): void {}
 
-export function handleClaim(event: Claim): void {}
+export function handleClaim(event: Claim): void {
+  const id = event.params.grantee.toHex()
+  const amount = event.params.amount;
+  let balance = Balance.load(id )
+  if (!balance){
+    // There should be an assign before any claim, so it's not possible to user claim before assign
+    return;
+  }
+  balance.amount.minus(amount)
+  balance.save();
+}
 
 export function handleRoleAdminChanged(event: RoleAdminChanged): void {}
 
